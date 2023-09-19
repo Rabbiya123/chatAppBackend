@@ -19,7 +19,7 @@ const Server = require("socket.io");
 const server = http.createServer(app);
 
 const secretKey1 = "my-secret-key";
-//-----------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------
 
 const io = Server(server, {
   cors: {
@@ -29,19 +29,49 @@ const io = Server(server, {
 
 app.use(cors());
 
-io.on("connection", (ws) => {
-  console.log("Client connected");
+io.on("connection", (socket) => {
+  console.log("User connected");
 
-  ws.on("live_message", (message) => {
-    console.log(`Received message from client side: ${message}`);
-    // ws.broadcast(message);
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+
+  socket.on("live_message", async (message) => {
+    console.log(`Received message from client: ${message}`);
+    try {
+      if (message.sender === message.receiver) {
+        console.log(
+          `User ${message.sender} is trying to chat with themselves. Ignoring.`
+        );
+        return;
+      }
+
+      // Save the message to the database
+      const newMessage = new mongoose.Schema({
+        sender: message.sender,
+        receiver: message.receiver,
+        content: message.content,
+      });
+      await newMessage.save();
+
+      const receiverSocket = io.sockets.connected[message.receiverSocketId];
+      if (receiverSocket) {
+        receiverSocket.emit("live_message", message);
+      } else {
+        console.log(`Receiver ${message.receiver} is not online`);
+      }
+
+      socket.emit("message_acknowledgment", "Message sent successfully");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   });
 });
 
 server.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
-//------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------
 
 // Connect to MongoDB0
 mongoose.connect("mongodb://localhost:27017/signup_app", {
