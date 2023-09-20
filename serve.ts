@@ -37,34 +37,35 @@ io.on("connection", (socket) => {
   });
   socket.on("live_message", async (message) => {
     console.log("Received live_message event");
-    console.log("Received message from client: " + JSON.stringify(message));
+    console.log("Received message from client: ", message);
 
     try {
       if (message.sender === message.receiver) {
-        console.log(
-          `User ${message.sender} is trying to chat with themselves. Ignoring.`
-        );
+        // console.log(
+        //   `User ${message.sender} is trying to chat
+        //    with themselves. Ignoring.`
+        // );
         return;
       }
 
       // Save the message to the database
-      const newMessage = new mongoose.Schema({
-        sender: message.sender,
-        receiver: message.receiver,
-        content: message.content,
-      });
-      await newMessage.save();
+      // const newMessage = new mongoose.Schema({
+      //   sender: message.sender,
+      //   receiver: message.receiver,
+      //   content: message.content,
+      // });
+      // await newMessage.save();
 
-      const receiverSocket = io.sockets.connected[message.receiverSocketId];
-      if (receiverSocket) {
-        receiverSocket.emit("live_message", { message });
-      } else {
-        console.log(`Receiver ${message.receiver} is not online`);
-      }
+      // const receiverSocket = io.sockets.connected[message.receiverSocketId];
+      // if (receiverSocket) {
+      //   receiverSocket.emit("live_message", { message });
+      // } else {
+      //   console.log(`Receiver ${message.receiver} is not online`);
+      // }
 
-      socket.emit("message_acknowledgment", "Message sent successfully");
+      // socket.emit("message_acknowledgment", "Message sent successfully");
     } catch (error) {
-      console.error("Error sending message:", error);
+      // console.error("Error sending message:", error);
     }
   });
 });
@@ -90,7 +91,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-//---------Signup
+//---------Signup-----------------------------------
 app.post("/api/signup", async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
@@ -120,7 +121,12 @@ app.post("/api/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { username: user.username, email: user.email, role: user.role },
+      {
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
       secretKey1,
       {
         expiresIn: "1h",
@@ -128,6 +134,7 @@ app.post("/api/login", async (req, res) => {
     );
     res.json({
       token,
+      userId: user._id,
       username: user.username,
       email: user.email,
       role: user.role,
