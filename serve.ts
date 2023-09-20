@@ -19,6 +19,7 @@ const Server = require("socket.io");
 const server = http.createServer(app);
 
 const secretKey1 = "my-secret-key";
+const connectedUsers = {};
 //-------------------------------------------------------------------------------------------------------
 
 const io = Server(server, {
@@ -35,7 +36,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("User disconnected");
   });
-  socket.on("live_message", async (message) => {
+  const userId = socket.on("live_message", async (message) => {
     console.log("Received live_message event");
     console.log("Received message from client: ", message);
 
@@ -73,7 +74,7 @@ io.on("connection", (socket) => {
 server.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
-//---------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------
 
 // Connect to MongoDB0
 mongoose.connect("mongodb://localhost:27017/signup_app", {
