@@ -35,9 +35,10 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("User disconnected");
   });
-
   socket.on("live_message", async (message) => {
-    console.log(`Received message from client: ${message}`);
+    console.log("Received live_message event");
+    console.log("Received message from client: " + JSON.stringify(message));
+
     try {
       if (message.sender === message.receiver) {
         console.log(
@@ -56,7 +57,7 @@ io.on("connection", (socket) => {
 
       const receiverSocket = io.sockets.connected[message.receiverSocketId];
       if (receiverSocket) {
-        receiverSocket.emit("live_message", message);
+        receiverSocket.emit("live_message", { message });
       } else {
         console.log(`Receiver ${message.receiver} is not online`);
       }
