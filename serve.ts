@@ -20,8 +20,9 @@ const server = http.createServer(app);
 
 const secretKey1 = "my-secret-key";
 const connectedUsers = {};
-//-------------------------------------------------------------------------------------------------------
-
+let receiverid = "";
+let senderid = "";
+//-----------------------------------------------------------------
 const io = Server(server, {
   cors: {
     origin: ["http://localhost:4200"],
@@ -32,42 +33,20 @@ app.use(cors());
 
 io.on("connection", (socket) => {
   console.log("User connected");
+  socket.on("joinchat", (roomid) => {
+    socket.join(roomid);
+    console.log(`User joined room: ${roomid}`);
+
+    socket.emit("roomJoined", `Joined room ${roomid}`);
+  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected");
   });
-  const userId = socket.on("live_message", async (message) => {
-    console.log("Received live_message event");
-    console.log("Received message from client: ", message);
 
-    try {
-      if (message.sender === message.receiver) {
-        // console.log(
-        //   `User ${message.sender} is trying to chat
-        //    with themselves. Ignoring.`
-        // );
-        return;
-      }
-
-      // Save the message to the database
-      // const newMessage = new mongoose.Schema({
-      //   sender: message.sender,
-      //   receiver: message.receiver,
-      //   content: message.content,
-      // });
-      // await newMessage.save();
-
-      // const receiverSocket = io.sockets.connected[message.receiverSocketId];
-      // if (receiverSocket) {
-      //   receiverSocket.emit("live_message", { message });
-      // } else {
-      //   console.log(`Receiver ${message.receiver} is not online`);
-      // }
-
-      // socket.emit("message_acknowledgment", "Message sent successfully");
-    } catch (error) {
-      // console.error("Error sending message:", error);
-    }
+  socket.on("live_message", (message) => {
+    console.log("Received message from client:", message);
+    io.to(message.receiver).emit("live_message", message);
   });
 });
 
