@@ -22,6 +22,7 @@ const secretKey1 = "my-secret-key";
 const connectedUsers = {};
 let receiverid = "";
 let senderid = "";
+let content = "";
 //-----------------------------------------------------------------
 const io = Server(server, {
   cors: {
@@ -39,13 +40,30 @@ io.on("connection", (socket) => {
     console.log("User disconnected");
   });
 
-  socket.on("message", (message) => {
+  socket.on("message", async (message) => {
     console.log("Received message from client:", message);
-    console.log("this receiverid", receiverid);
-
     socket.broadcast.emit("message", message.content);
+    try {
+      const newMessage = new Message({
+        sender: message.sender,
+        receiver: message.receiver,
+        content: message.content,
+      });
+
+      await newMessage.save();
+    } catch (error) {
+      console.error("Error saving message:", error);
+    }
   });
 });
+const messageSchema = new mongoose.Schema({
+  sender: String,
+  receiver: String,
+  content: String,
+  timestamp: { type: Date, default: Date.now },
+});
+
+const Message = mongoose.model("messages", messageSchema);
 
 server.listen(3000, () => {
   console.log("Server is running on port 3000");
