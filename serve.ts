@@ -32,38 +32,20 @@ const io = Server(server, {
 app.use(cors());
 
 io.on("connection", (socket) => {
+  socket.join(receiverid);
   console.log("User connected");
-
-  socket.on("joinchat", (senderid, receiverid) => {
-    const roomId = generateRoomId(senderid, receiverid);
-    console.log(roomId);
-    socket.join(roomId, (error) => {
-      if (error) {
-        console.error(`Error joining room: ${error.message}`);
-      } else {
-        console.log(`User joined room: ${roomId}`);
-      }
-    });
-  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected");
   });
 
-  socket.on("live_message", (message) => {
+  socket.on("message", (message) => {
     console.log("Received message from client:", message);
+    console.log("this receiverid", receiverid);
 
-    senderid = message.sender;
-    receiverid = message.receiver;
-    io.to(message.receiver).emit("live_message", message);
+    socket.broadcast.emit("message", message.content);
   });
 });
-
-function generateRoomId(senderid, receiverid) {
-  // You can implement your own logic to create a unique room ID here
-  // For example, concatenate senderId and recipientId and hash it
-  return `${senderid}-${receiverid}`;
-}
 
 server.listen(3000, () => {
   console.log("Server is running on port 3000");
