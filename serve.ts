@@ -158,11 +158,11 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-app.get("/api/messages/user/:userId", async (req, res) => {
+app.get("/api/messages/user/:username", async (req, res) => {
   try {
     const userId = req.params.userId;
     const messages = await Message.find({
-      $or: [{ sender: userId }, { receiver: userId }],
+      $or: [{ username: userId }, { receiverName: userId }],
     });
 
     if (!messages) {
