@@ -157,3 +157,23 @@ app.get("/api/users", async (req, res) => {
     res.status(500).json({ error: "An error occurred while fetching users" });
   }
 });
+
+app.get("/api/messages/user/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const messages = await Message.find({
+      $or: [{ sender: userId }, { receiver: userId }],
+    });
+
+    if (!messages) {
+      return res
+        .status(404)
+        .json({ error: "No messages found for this user." });
+    }
+
+    res.status(200).json(messages);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "An error occurred" });
+  }
+});
