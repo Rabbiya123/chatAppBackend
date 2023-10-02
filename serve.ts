@@ -48,6 +48,8 @@ io.on("connection", (socket) => {
         sender: message.sender,
         receiver: message.receiver,
         content: message.content,
+        username: message.username,
+        receiverName: message.receiverName,
       });
 
       await newMessage.save();
@@ -60,6 +62,8 @@ const messageSchema = new mongoose.Schema({
   sender: String,
   receiver: String,
   content: String,
+  username: String,
+  receiverName: String,
   timestamp: { type: Date, default: Date.now },
 });
 
@@ -158,14 +162,21 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-app.get("/api/messages/user/:username", async (req, res) => {
+app.get("/api/messages/user/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
     const messages = await Message.find({
-      $or: [{ username: userId }, { receiverName: userId }],
+      $or: [{ username: user.username }, { receiverName: user.username }],
     });
 
-    if (!messages) {
+    if (!messages || messages.length === 0) {
       return res
         .status(404)
         .json({ error: "No messages found for this user." });
