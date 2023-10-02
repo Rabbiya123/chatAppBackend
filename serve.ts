@@ -142,7 +142,7 @@ app.post("/api/login", async (req, res) => {
     res.status(500).json({ error: "An error occurred" });
   }
 });
-
+// find the only agents role from database
 app.get("/api/agents", authMiddleware, async (req, res) => {
   try {
     const agents = await User.find({ role: "agent" });
@@ -152,6 +152,8 @@ app.get("/api/agents", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "An error occurred while fetching agents" });
   }
 });
+
+//create an api to find the user's from the list
 app.get("/api/users", async (req, res) => {
   try {
     const users = await User.find({});
