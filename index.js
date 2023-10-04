@@ -1,28 +1,40 @@
 const express = require("express");
-const http = require("http");
-
-const cors = require("cors");
+const redis = require("redis");
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-const Server = require("socket.io");
-const server = http.createServer(app);
+app.use(express.json());
 
-const io = Server(server, {
-  cors: {
-    origin: ["http://localhost:4200"],
-  },
+const redisClient = redis.createClient({
+  host: "127.0.0.1",
+  port: 6379,
+});
+redisClient.connect("");
+redisClient.on("connect", () => {
+  console.log("Connected to Redis");
 });
 
-app.use(cors());
+redisClient.on("error", (err) => {
+  console.error("Redis error:", err);
+});
 
-io.on("connection", (ws) => {
-  console.log("Client connected");
+app.post("/set", (req, res) => {
+  const { key, value } = req.body;
 
-  ws.on("live_message", (message) => {
-    console.log(`Received message from client side: ${message}`);
+  if (!key || !value) {
+    return res.status(400).send("Both key and value are required.");
+  }
+  redisClient.hSet(key, "this is new hset", (err, reply) => {
+    if (err) {
+      console.error("Redis Error:", err);
+      res.status(500).send("Error setting value in Redis");
+    } else {
+      console.log(`Key '${key}' set in Redis with value '${value}'`);
+      res.status(200).send(`Key '${key}' set successfully in Redis`);
+    }
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server is running on port 3000");
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

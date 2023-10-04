@@ -1,6 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-
+const redis = require("redis");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
@@ -23,6 +23,83 @@ const connectedUsers = {};
 let receiverid = "";
 let senderid = "";
 let content = "";
+// --------------------------------------------------------------
+
+const redisClient = redis.createClient(6379, "127.0.0.1");
+redisClient.connect();
+redisClient.on("connect", () => {
+  console.log("Connected to Redis");
+});
+
+// app.get("/set", async (req, res) => {
+//   let key = "status";
+//   let getKeyName = await redisClient.get(key);
+
+//   let myValue = {
+//     id: 27,
+//     userName: "My redis",
+//   };
+
+//   let myArray;
+//   if (getKeyName) {
+//     myArray = JSON.parse(getKeyName);
+//     console.log("get data");
+//   } else {
+//     console.log("set");
+//     redisClient.set(key, JSON.stringify(myValue));
+//     myArray = myValue;
+//   }
+//   res.status(200).json(myArray);
+// });
+
+// redisClient.on("error", (err) => {
+//   console.error("Redis error:", err);
+// });
+
+// app.get("/set", async (req, res) => {
+//   let key = "status";
+
+//   try {
+//     let getKeyName = await redisClient.get(key);
+
+//     let myValue = {
+//       id: 27,
+//       userName: "My redis",
+//     };
+
+//     let myArray;
+//     if (getKeyName) {
+//       myArray = JSON.parse(getKeyName);
+//       console.log("get data");
+//     } else {
+//       console.log("set");
+//       await redisClient.set(key, JSON.stringify(myValue));
+//       myArray = myValue;
+//     }
+//     res.status(200).json(myArray);
+//   } catch (error) {
+//     console.error("Redis Error:", error);
+//     res.status(500).send("Error accessing Redis");
+//   }
+// });
+
+app.post("/set", (req, res) => {
+  const { key, value } = req.body;
+
+  if (!key || !value) {
+    return res.status(400).send("Both key and value are required.");
+  }
+  redisClient.set(key, value, (err, reply) => {
+    if (err) {
+      console.error("Redis Error:", err);
+      res.status(500).send("Error setting value in Redis");
+    } else {
+      console.log(`Key '${key}' set in Redis with value '${value}'`);
+      res.status(200).send(`Key '${key}' set successfully in Redis`);
+    }
+  });
+});
+
 //-----------------------------------------------------------------
 const io = Server(server, {
   cors: {
@@ -32,9 +109,11 @@ const io = Server(server, {
 
 app.use(cors());
 
-io.on("connection", (socket) => {
-  socket.join(receiverid);
+io.on("connection", async (socket) => {
   console.log("User connected");
+
+  var userId = socket.handshake.auth.token;
+  User.findByIdAndUpdate({ _id: userId }, { $set: { is_online: "1" } });
 
   socket.on("disconnect", () => {
     console.log("User disconnected");
@@ -42,6 +121,7 @@ io.on("connection", (socket) => {
 
   socket.on("message", async (message) => {
     console.log("Received message from client:", message);
+    senderid = message.sender;
     socket.broadcast.emit("message", message.content);
     try {
       const newMessage = new Message({
@@ -72,6 +152,7 @@ const Message = mongoose.model("messages", messageSchema);
 server.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
+
 //--------------------------------------------------------------
 
 // Connect to MongoDB0
@@ -85,6 +166,7 @@ const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   role: String,
+  is_online: { type: String, default: "0" },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -93,13 +175,13 @@ const User = mongoose.model("User", userSchema);
 //---------Signup-----------------------------------
 app.post("/api/signup", async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { username, email, password, role, is_online } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       res.status(400).json({ error: "Email is already taken" });
       return;
     }
-    const newUser = new User({ username, email, password, role });
+    const newUser = new User({ username, email, password, role, is_online });
     await newUser.save();
     res.status(201).json({ message: "User created successfully" });
   } catch (error) {
@@ -151,6 +233,10 @@ app.get("/api/agents", authMiddleware, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "An error occurred while fetching agents" });
   }
+});
+
+app.get("/", (req, res) => {
+  res.send("This is server side");
 });
 
 //create an api to find the user's from the list
