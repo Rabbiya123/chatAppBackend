@@ -23,6 +23,7 @@ const connectedUsers = {};
 let receiverid = "";
 let senderid = "";
 let content = "";
+let userKey = "";
 // --------------------------------------------------------------
 
 const redisClient = redis.createClient(6379, "127.0.0.1");
@@ -82,7 +83,9 @@ redisClient.on("connect", () => {
 //     res.status(500).send("Error accessing Redis");
 //   }
 // });
+//----------------------------------------------------------------------
 
+//Simple store key and value in redis database
 app.post("/set", (req, res) => {
   const { key, value } = req.body;
 
@@ -275,4 +278,20 @@ app.get("/api/messages/user/:userId", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "An error occurred" });
   }
+});
+app.post("/loginUserId", (req, res) => {
+  userKey = req.body.userId;
+  console.log("Received user ID:", userKey);
+  res.json({ message: "User ID received successfully" });
+});
+
+app.post("/setId", (req, res) => {
+  const value = "online";
+
+  redisClient.set(userKey, value, (err, reply) => {
+    if (err) {
+      console.error("Redis Error:", err);
+      res.status(500).send("Error setting value in Redis");
+    }
+  });
 });

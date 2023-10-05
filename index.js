@@ -19,12 +19,13 @@ redisClient.on("error", (err) => {
 });
 
 app.post("/set", (req, res) => {
-  const { key, value } = req.body;
-
+  const key = "11";
+  const value = "hy";
+  console.log(key, value);
   if (!key || !value) {
     return res.status(400).send("Both key and value are required.");
   }
-  redisClient.hSet(key, "this is new hset", (err, reply) => {
+  redisClient.set(key, value, (err, reply) => {
     if (err) {
       console.error("Redis Error:", err);
       res.status(500).send("Error setting value in Redis");
@@ -33,6 +34,12 @@ app.post("/set", (req, res) => {
       res.status(200).send(`Key '${key}' set successfully in Redis`);
     }
   });
+});
+
+app.get("/getKeys", async (req, res) => {
+  const key = "status";
+  let getKeyName = await redisClient.get(key);
+  console.log(getKeyName);
 });
 
 app.listen(PORT, () => {
