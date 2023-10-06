@@ -104,6 +104,14 @@ app.post("/set", (req, res) => {
 });
 
 //-----------------------------------------------------------------
+app.post("/loginUserId", (req, res) => {
+  userKey = req.body.userId;
+  console.log("Received user ID:", userKey);
+  res.json({ message: "User ID received successfully" });
+});
+
+//-------------------------------------
+
 const io = Server(server, {
   cors: {
     origin: ["http://localhost:4200"],
@@ -114,12 +122,21 @@ app.use(cors());
 
 io.on("connection", async (socket) => {
   console.log("User connected");
-
-  var userId = socket.handshake.auth.token;
-  User.findByIdAndUpdate({ _id: userId }, { $set: { is_online: "1" } });
+  const value = "online";
+  console.log("this is userid inner of socket", userKey);
+  redisClient.set(userKey, value, (err, reply) => {
+    if (err) {
+      console.error("Redis Error:", err);
+    }
+  });
 
   socket.on("disconnect", () => {
     console.log("User disconnected");
+    redisClient.DEL(userKey, (err, reply) => {
+      if (err) {
+        console.error("error while deleting the UserKey");
+      }
+    });
   });
 
   socket.on("message", async (message) => {
@@ -279,19 +296,14 @@ app.get("/api/messages/user/:userId", async (req, res) => {
     res.status(500).json({ error: "An error occurred" });
   }
 });
-app.post("/loginUserId", (req, res) => {
-  userKey = req.body.userId;
-  console.log("Received user ID:", userKey);
-  res.json({ message: "User ID received successfully" });
-});
 
-app.post("/setId", (req, res) => {
-  const value = "online";
+// app.post("/setId", (req, res) => {
+//   const value = "online";
 
-  redisClient.set(userKey, value, (err, reply) => {
-    if (err) {
-      console.error("Redis Error:", err);
-      res.status(500).send("Error setting value in Redis");
-    }
-  });
-});
+//   redisClient.set(userKey, value, (err, reply) => {
+//     if (err) {
+//       console.error("Redis Error:", err);
+//       res.status(500).send("Error setting value in Redis");
+//     }
+//   });
+// });
