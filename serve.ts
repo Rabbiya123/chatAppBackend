@@ -32,57 +32,6 @@ redisClient.on("connect", () => {
   console.log("Connected to Redis");
 });
 
-// app.get("/set", async (req, res) => {
-//   let key = "status";
-//   let getKeyName = await redisClient.get(key);
-
-//   let myValue = {
-//     id: 27,
-//     userName: "My redis",
-//   };
-
-//   let myArray;
-//   if (getKeyName) {
-//     myArray = JSON.parse(getKeyName);
-//     console.log("get data");
-//   } else {
-//     console.log("set");
-//     redisClient.set(key, JSON.stringify(myValue));
-//     myArray = myValue;
-//   }
-//   res.status(200).json(myArray);
-// });
-
-// redisClient.on("error", (err) => {
-//   console.error("Redis error:", err);
-// });
-
-// app.get("/set", async (req, res) => {
-//   let key = "status";
-
-//   try {
-//     let getKeyName = await redisClient.get(key);
-
-//     let myValue = {
-//       id: 27,
-//       userName: "My redis",
-//     };
-
-//     let myArray;
-//     if (getKeyName) {
-//       myArray = JSON.parse(getKeyName);
-//       console.log("get data");
-//     } else {
-//       console.log("set");
-//       await redisClient.set(key, JSON.stringify(myValue));
-//       myArray = myValue;
-//     }
-//     res.status(200).json(myArray);
-//   } catch (error) {
-//     console.error("Redis Error:", error);
-//     res.status(500).send("Error accessing Redis");
-//   }
-// });
 //----------------------------------------------------------------------
 
 //Simple store key and value in redis database
@@ -124,15 +73,33 @@ io.on("connection", async (socket) => {
   console.log("User connected");
   const value = "online";
   console.log("this is userid inner of socket", userKey);
-  redisClient.set(userKey, value, (err, reply) => {
+  redisClient.HSET("user-presence", userKey, value, (err, reply) => {
     if (err) {
       console.error("Redis Error:", err);
     }
   });
 
+  app.get("/onlineUser", async (req, res) => {
+    try {
+      const onlineUser = await redisClient.HGETALL(
+        "user-presence",
+        (err, reply) => {
+          if (err) {
+            console.error("Redis Error:", err);
+          }
+        }
+      );
+      res.status(200).json(onlineUser);
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: "An error occurred while fetching onlineUser" });
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("User disconnected");
-    redisClient.DEL(userKey, (err, reply) => {
+    redisClient.HDEL("user-presence", userKey, (err, reply) => {
       if (err) {
         console.error("error while deleting the UserKey");
       }
@@ -296,14 +263,3 @@ app.get("/api/messages/user/:userId", async (req, res) => {
     res.status(500).json({ error: "An error occurred" });
   }
 });
-
-// app.post("/setId", (req, res) => {
-//   const value = "online";
-
-//   redisClient.set(userKey, value, (err, reply) => {
-//     if (err) {
-//       console.error("Redis Error:", err);
-//       res.status(500).send("Error setting value in Redis");
-//     }
-//   });
-// });
